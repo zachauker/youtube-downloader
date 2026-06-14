@@ -4,6 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    labels:
+      - "net.unraid.docker.icon=https://img.icons8.com/?size=100&id=O0rFPukE4XcO&format=png&color=000000"
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8090]"
     environment:
       - DOWNLOAD_DIR=/downloads
       - DATA_DIR=/data
