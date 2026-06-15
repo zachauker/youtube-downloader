@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: youtube-downloader
     restart: unless-stopped
     labels:
       - "net.unraid.docker.icon=https://img.icons8.com/?size=100&id=O0rFPukE4XcO&format=png&color=000000"
@@ -14,7 +15,7 @@ services:
       - /mnt/user/data/youtube:/downloads   # your Unraid share
       - yt_data:/data                        # persists download history DB
     ports:
-      - "8090:80"
+      - "8090:8090"
 
 volumes:
   yt_data:
