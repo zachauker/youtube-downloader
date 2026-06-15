@@ -17,7 +17,9 @@ FROM python:3.12-slim
 # nginx only — no ffmpeg via apt
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # Remove Debian's default site so it doesn't shadow our config
+    && rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 
 # Drop in the static ffmpeg/ffprobe binaries
 COPY --from=ffmpeg /ffmpeg  /usr/local/bin/ffmpeg
