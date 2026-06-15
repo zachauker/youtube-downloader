@@ -8,14 +8,20 @@ RUN npm install
 COPY frontend/ .
 RUN npm run build
 
-# ── Stage 2: Runtime — Python backend + nginx in one container ───────────────
+# ── Stage 2: Static ffmpeg binary (single ~60MB file, no apt deps) ───────────
+FROM mwader/static-ffmpeg:latest AS ffmpeg
+
+# ── Stage 3: Runtime — Python backend + nginx in one container ───────────────
 FROM python:3.12-slim
 
-# nginx + ffmpeg (required by yt-dlp to merge video/audio streams)
+# nginx only — no ffmpeg via apt
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
-    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
+
+# Drop in the static ffmpeg/ffprobe binaries
+COPY --from=ffmpeg /ffmpeg  /usr/local/bin/ffmpeg
+COPY --from=ffmpeg /ffprobe /usr/local/bin/ffprobe
 
 # Python dependencies
 WORKDIR /app
@@ -35,6 +41,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 80
+EXPOSE 8090
 
 ENTRYPOINT ["/entrypoint.sh"]
