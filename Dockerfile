@@ -44,6 +44,12 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 # nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# PIA's private CA cert — required for WireGuard key registration (port 1337).
+# The system CA bundle does not include PIA's certificate authority.
+RUN mkdir -p /etc/pia && \
+    curl -sf -o /etc/pia/ca.rsa.4096.crt \
+    "https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt"
+
 # VPN setup script
 COPY vpn/pia-connect.sh /vpn/pia-connect.sh
 RUN chmod +x /vpn/pia-connect.sh

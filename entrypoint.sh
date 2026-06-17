@@ -1,15 +1,23 @@
 #!/bin/sh
 set -e
 
-# ── VPN setup (required when PIA credentials are provided) ───────────────────
+# Print a clear message if anything in this script fails
+trap 'echo "[STARTUP] FATAL: startup failed at line $LINENO — check the logs above" >&2' EXIT
+
+# ── VPN ──────────────────────────────────────────────────────────────────────
 if [ -n "${PIA_USER:-}" ] && [ -n "${PIA_PASS:-}" ]; then
     /vpn/pia-connect.sh
 else
-    echo "[VPN] PIA_USER/PIA_PASS not set — starting WITHOUT VPN"
+    echo "[STARTUP] WARNING: PIA_USER/PIA_PASS not set — starting WITHOUT VPN"
 fi
 
-# ── Start FastAPI backend (nginx proxies /api/ to it) ─────────────────────────
+# ── Backend ───────────────────────────────────────────────────────────────────
+echo "[STARTUP] Starting FastAPI backend..."
 uvicorn main:app --host 127.0.0.1 --port 8000 &
 
-# ── Start nginx in foreground (keeps the container alive) ─────────────────────
+# ── nginx ─────────────────────────────────────────────────────────────────────
+echo "[STARTUP] Starting nginx on port ${WEBUI_PORT:-8090}..."
+
+# Disable the trap now that startup succeeded
+trap - EXIT
 exec nginx -g "daemon off;"
