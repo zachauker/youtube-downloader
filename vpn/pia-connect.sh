@@ -111,37 +111,34 @@ ip route add default dev wg0
 # Use PIA's DNS
 echo "nameserver ${DNS_IP}" > /etc/resolv.conf
 
-# ── 8. Kill switch ────────────────────────────────────────────────────────────
+# ── 8. Kill switch (OUTPUT-only) ─────────────────────────────────────────────
+# We only lock down OUTPUT, leaving INPUT untouched.
+# Blocking INPUT causes Docker's port mapping to stop working for the WebUI,
+# regardless of --dport rules, due to how the bridge NAT rewrites packet headers.
+#
+# The kill switch still works: if wg0 drops, the default route disappears and
+# any download attempt fails — plus our OUTPUT DROP rule below blocks internet
+# traffic that hasn't gone through the tunnel.
 log "Applying kill switch..."
 
-iptables -F
-iptables -X
+iptables -F OUTPUT
 
-# Default: block everything
-iptables -P INPUT   DROP
-iptables -P FORWARD DROP
-iptables -P OUTPUT  DROP
-
-# Loopback (nginx ↔ uvicorn on 127.0.0.1)
-iptables -A INPUT  -i lo -j ACCEPT
+# Allow loopback (nginx ↔ uvicorn)
 iptables -A OUTPUT -o lo -j ACCEPT
 
-# Allow replies to connections we initiated
-iptables -A INPUT  -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-
-# WebUI — allow inbound TCP on the web port regardless of source.
-# Docker NAT rewrites the client IP to the bridge gateway inside the container,
-# so matching on the original LAN IP never works here.
-iptables -A INPUT -p tcp --dport "${WEBUI_PORT}" -j ACCEPT
-
-# WireGuard handshake UDP — must go through eth0 before the tunnel exists
-iptables -A OUTPUT -d "${WG_HOST}/32" -p udp --dport "${WG_PORT}" -j ACCEPT
-iptables -A INPUT  -s "${WG_HOST}/32" -p udp --sport "${WG_PORT}" -j ACCEPT
-
-# All VPN tunnel traffic
-iptables -A INPUT  -i wg0 -j ACCEPT
+# Allow all outbound through VPN tunnel
 iptables -A OUTPUT -o wg0 -j ACCEPT
+
+# Allow WireGuard handshake UDP to the VPN endpoint (goes via eth0)
+iptables -A OUTPUT -d "${WG_HOST}/32" -p udp --dport "${WG_PORT}" -j ACCEPT
+
+# Allow outbound to RFC1918 private ranges (LAN, Docker bridge, oakwood_proxy)
+iptables -A OUTPUT -d 10.0.0.0/8     -j ACCEPT
+iptables -A OUTPUT -d 172.16.0.0/12  -j ACCEPT
+iptables -A OUTPUT -d 192.168.0.0/16 -j ACCEPT
+
+# Block everything else outbound — the kill switch
+iptables -A OUTPUT -j DROP
 
 log "Kill switch active."
 log "Connected to PIA (${PIA_REGION}). All downloads tunnel through ${CLIENT_IP}."
