@@ -46,6 +46,13 @@ WG_PRIV=$(wg genkey)
 WG_PUB=$(echo "$WG_PRIV" | wg pubkey)
 
 # ── 4. Register key with PIA ──────────────────────────────────────────────────
+# Test TCP reachability first so the error is clear if port 1337 is firewalled.
+log "Testing reachability of ${WG_HOST}:${WG_PORT}..."
+if ! nc -z -w 5 "${WG_HOST}" "${WG_PORT}" 2>/dev/null; then
+    die "Cannot reach ${WG_HOST}:${WG_PORT} — TCP port ${WG_PORT} appears blocked.\n       Check that your network/firewall allows outbound TCP to that port."
+fi
+log "Port ${WG_PORT} reachable."
+
 # Uses PIA's own CA cert — the system bundle does not include their CA.
 log "Registering WireGuard key..."
 REGISTER=$(curl -sS --show-error -m 15 -G \
@@ -53,10 +60,10 @@ REGISTER=$(curl -sS --show-error -m 15 -G \
     --cacert "${PIA_CACERT}" \
     --data-urlencode "pt=${TOKEN}" \
     --data-urlencode "pubkey=${WG_PUB}" \
-    "https://${WG_CN}:${WG_PORT}/addKey" 2>&1) || die "Key registration failed: ${REGISTER}"
+    "https://${WG_CN}:${WG_PORT}/addKey" 2>&1) || die "Key registration curl failed:\n       ${REGISTER}"
 
 STATUS=$(echo "$REGISTER" | jq -r '.status // empty')
-[ "$STATUS" = "OK" ] || die "Key registration rejected: $REGISTER"
+[ "$STATUS" = "OK" ] || die "Key registration rejected by server: ${REGISTER}"
 
 SERVER_PUB=$(echo "$REGISTER" | jq -r '.server_pub_key')
 CLIENT_IP=$(echo  "$REGISTER" | jq -r '.peer_ip')
