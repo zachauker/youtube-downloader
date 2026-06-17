@@ -11,17 +11,22 @@ RUN npm run build
 # ── Stage 2: Static ffmpeg binary (single ~60MB file, no apt deps) ───────────
 FROM mwader/static-ffmpeg:latest AS ffmpeg
 
-# ── Stage 3: Runtime — Python backend + nginx in one container ───────────────
+# ── Stage 3: Runtime — Python backend + nginx + WireGuard in one container ───
 FROM python:3.12-slim
 
-# nginx only — no ffmpeg via apt
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
+    wireguard-tools \
+    iproute2 \
+    iptables \
+    curl \
+    jq \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     # Remove Debian's default site so it doesn't shadow our config
     && rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 
-# Drop in the static ffmpeg/ffprobe binaries
+# Static ffmpeg/ffprobe binaries
 COPY --from=ffmpeg /ffmpeg  /usr/local/bin/ffmpeg
 COPY --from=ffmpeg /ffprobe /usr/local/bin/ffprobe
 
@@ -39,7 +44,11 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 # nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Entrypoint script
+# VPN setup script
+COPY vpn/pia-connect.sh /vpn/pia-connect.sh
+RUN chmod +x /vpn/pia-connect.sh
+
+# Entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

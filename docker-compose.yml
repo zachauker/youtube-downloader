@@ -5,16 +5,30 @@ services:
       dockerfile: Dockerfile
     container_name: youtube-downloader
     restart: unless-stopped
-    network_mode: "container:binhex-qbittorrentvpn"
+    cap_add:
+      - NET_ADMIN      # required to create WireGuard interfaces and set iptables rules
     labels:
       - "net.unraid.docker.icon=https://img.icons8.com/?size=100&id=O0rFPukE4XcO&format=png&color=000000"
       - "net.unraid.docker.webui=http://[IP]:[PORT:8090]"
     environment:
+      # ── PIA credentials (required for VPN) ──────────────────────────────
+      - PIA_USER=your_pia_username
+      - PIA_PASS=your_pia_password
+      # ── PIA region (optional — see list below) ───────────────────────────
+      # Common values: us_silicon_valley, us_new_york, us_chicago, us_seattle,
+      #                uk_london, ca_toronto, de_berlin, nl_amsterdam
+      - PIA_REGION=us_silicon_valley
+      # ── Your LAN subnet — keeps the WebUI reachable ──────────────────────
+      # Change to match your home network (e.g. 10.0.0.0/24, 192.168.0.0/24)
+      - LAN_NETWORK=192.168.1.0/24
+      # ── Download paths ───────────────────────────────────────────────────
       - DOWNLOAD_DIR=/downloads
       - DATA_DIR=/data
     volumes:
       - /mnt/user/data/youtube:/downloads   # your Unraid share
       - yt_data:/data                        # persists download history DB
+    ports:
+      - "8090:8090"
 
 volumes:
   yt_data:
