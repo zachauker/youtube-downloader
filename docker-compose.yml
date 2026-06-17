@@ -29,6 +29,12 @@ services:
       - yt_data:/data                        # persists download history DB
     ports:
       - "8090:8090"
+    networks:
+      - oakwoodproxy
+
+networks:
+  oakwoodproxy:
+    external: true
 
 volumes:
   yt_data:
