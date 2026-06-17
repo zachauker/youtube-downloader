@@ -65,9 +65,14 @@ REGISTER=$(curl -sS --show-error -m 15 -G \
 STATUS=$(echo "$REGISTER" | jq -r '.status // empty')
 [ "$STATUS" = "OK" ] || die "Key registration rejected by server: ${REGISTER}"
 
-SERVER_PUB=$(echo "$REGISTER" | jq -r '.server_pub_key')
+SERVER_PUB=$(echo "$REGISTER" | jq -r '.server_key')
 CLIENT_IP=$(echo  "$REGISTER" | jq -r '.peer_ip')
 DNS_IP=$(echo     "$REGISTER" | jq -r '.dns_servers[0]')
+
+[ -n "$SERVER_PUB" ] && [ "$SERVER_PUB" != "null" ] || die "server_key missing from PIA response: ${REGISTER}"
+[ -n "$CLIENT_IP"  ] && [ "$CLIENT_IP"  != "null" ] || die "peer_ip missing from PIA response: ${REGISTER}"
+[ -n "$DNS_IP"     ] && [ "$DNS_IP"     != "null" ] || die "dns_servers missing from PIA response: ${REGISTER}"
+
 log "Tunnel IP: ${CLIENT_IP}  DNS: ${DNS_IP}"
 
 # ── 5. Record default gateway before touching routes ─────────────────────────
