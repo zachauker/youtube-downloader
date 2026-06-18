@@ -106,11 +106,14 @@ ip link set wg0 up
 # Pin the VPN endpoint to the real gateway so WireGuard handshakes use eth0
 ip route replace "${WG_HOST}/32" via "$DEFAULT_GW" dev "$DEFAULT_IF"
 
-# Route all RFC1918 ranges back via eth0 (the Docker bridge gateway).
-# Without this, nginx responses to LAN clients (e.g. a browser at 192.168.x.x)
-# hit the default route (wg0), get encrypted and sent into the VPN tunnel, and
-# the VPN server can't route them back to your LAN — causing a WebUI timeout.
-# Internet traffic (non-RFC1918) still uses the default wg0 route below.
+# PIA's DNS server lives inside the VPN (it's a 10.x.x.x address reachable only
+# through wg0). Add a /32 for it before the broad /8 route below — Linux uses
+# longest-prefix-match, so this specific route wins and DNS queries go via wg0.
+ip route replace "${DNS_IP}/32" dev wg0
+
+# Route all RFC1918 ranges back via eth0 (Docker bridge gateway).
+# Without this, nginx responses to LAN clients hit the default wg0 route,
+# get encrypted into the VPN tunnel, and never reach the browser.
 ip route replace 10.0.0.0/8     via "$DEFAULT_GW" dev "$DEFAULT_IF"
 ip route replace 192.168.0.0/16 via "$DEFAULT_GW" dev "$DEFAULT_IF"
 # 172.16.0.0/12 is already covered by the directly-connected Docker network route
@@ -119,7 +122,7 @@ ip route replace 192.168.0.0/16 via "$DEFAULT_GW" dev "$DEFAULT_IF"
 ip route del default 2>/dev/null || true
 ip route add default dev wg0
 
-# Use PIA's DNS
+# Use PIA's DNS (routed through wg0 via the /32 route above)
 echo "nameserver ${DNS_IP}" > /etc/resolv.conf
 
 # ── 8. Kill switch (OUTPUT-only) ─────────────────────────────────────────────
