@@ -141,6 +141,9 @@ def _worker():
                 "merge_output_format": "mp4",
                 "noplaylist": False,
             }
+            cookie_file = DOWNLOAD_DIR / "cookies.txt"
+            if cookie_file.exists():
+                ydl_opts["cookiefile"] = str(cookie_file)
             if item["quality"] == "audio":
                 ydl_opts["postprocessors"] = [{
                     "key": "FFmpegExtractAudio",
@@ -291,12 +294,16 @@ async def get_info(url: str):
     loop = asyncio.get_event_loop()
 
     def _fetch():
-        with yt_dlp.YoutubeDL({
+        opts: dict = {
             "quiet": True,
             "no_warnings": True,
             "extract_flat": True,
             "noplaylist": False,
-        }) as ydl:
+        }
+        cookie_file = DOWNLOAD_DIR / "cookies.txt"
+        if cookie_file.exists():
+            opts["cookiefile"] = str(cookie_file)
+        with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
 
     try:
