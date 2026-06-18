@@ -82,11 +82,11 @@ def broadcast(event_type: str, data: dict):
 
 
 FORMAT_MAP = {
-    "best":   "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-    "1080p":  "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best[height<=1080]",
-    "720p":   "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]",
-    "480p":   "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best[height<=480]",
-    "360p":   "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best[height<=360]",
+    "best":   "bestvideo+bestaudio/best",
+    "1080p":  "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
+    "720p":   "bestvideo[height<=720]+bestaudio/best[height<=720]/best",
+    "480p":   "bestvideo[height<=480]+bestaudio/best[height<=480]/best",
+    "360p":   "bestvideo[height<=360]+bestaudio/best[height<=360]/best",
     "audio":  "bestaudio[ext=m4a]/bestaudio",
 }
 
