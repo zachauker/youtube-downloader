@@ -139,9 +139,7 @@ def _worker():
                 "outtmpl": str(DOWNLOAD_DIR / "%(uploader)s/%(title)s.%(ext)s"),
                 "progress_hooks": [make_hook(next_id)],
                 "merge_output_format": "mp4",
-                "quiet": True,
-                "no_warnings": True,
-                "ignoreerrors": True,
+                "noplaylist": False,
             }
             if item["quality"] == "audio":
                 ydl_opts["postprocessors"] = [{
@@ -154,6 +152,13 @@ def _worker():
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(item["url"], download=True)
+
+                if info is None:
+                    raise Exception(
+                        "yt-dlp returned no data — the video may be unavailable, "
+                        "age-restricted, or this VPN exit-node is blocked by YouTube. "
+                        "Check the container logs for details."
+                    )
 
                 title = "Unknown"
                 if info:
@@ -286,7 +291,12 @@ async def get_info(url: str):
     loop = asyncio.get_event_loop()
 
     def _fetch():
-        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": True}) as ydl:
+        with yt_dlp.YoutubeDL({
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": True,
+            "noplaylist": False,
+        }) as ydl:
             return ydl.extract_info(url, download=False)
 
     try:
@@ -298,10 +308,11 @@ async def get_info(url: str):
         raise HTTPException(400, "Could not fetch info")
 
     is_playlist = info.get("_type") == "playlist"
+    entries = list(info.get("entries") or []) if is_playlist else []
     return {
         "title": info.get("title", "Unknown"),
         "is_playlist": is_playlist,
-        "count": len(info.get("entries") or []) if is_playlist else 1,
+        "count": len(entries) if is_playlist else 1,
         "thumbnail": info.get("thumbnail"),
         "duration": info.get("duration"),
     }
