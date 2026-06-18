@@ -106,11 +106,6 @@ ip link set wg0 up
 # Pin the VPN endpoint to the real gateway so WireGuard handshakes use eth0
 ip route replace "${WG_HOST}/32" via "$DEFAULT_GW" dev "$DEFAULT_IF"
 
-# PIA's DNS server lives inside the VPN (it's a 10.x.x.x address reachable only
-# through wg0). Add a /32 for it before the broad /8 route below — Linux uses
-# longest-prefix-match, so this specific route wins and DNS queries go via wg0.
-ip route replace "${DNS_IP}/32" dev wg0
-
 # Route all RFC1918 ranges back via eth0 (Docker bridge gateway).
 # Without this, nginx responses to LAN clients hit the default wg0 route,
 # get encrypted into the VPN tunnel, and never reach the browser.
@@ -122,8 +117,11 @@ ip route replace 192.168.0.0/16 via "$DEFAULT_GW" dev "$DEFAULT_IF"
 ip route del default 2>/dev/null || true
 ip route add default dev wg0
 
-# Use PIA's DNS (routed through wg0 via the /32 route above)
-echo "nameserver ${DNS_IP}" > /etc/resolv.conf
+# Use Cloudflare DNS. PIA's internal DNS (10.0.0.x) sits inside the RFC1918 range
+# we've routed via eth0 for WebUI access — so queries to it never reach the VPN.
+# 1.1.1.1 is a public IP, hits the default wg0 route, and DNS queries go through
+# the VPN tunnel automatically. Privacy is preserved.
+printf 'nameserver 1.1.1.1\nnameserver 1.0.0.1\n' > /etc/resolv.conf
 
 # ── 8. Kill switch (OUTPUT-only) ─────────────────────────────────────────────
 # We only lock down OUTPUT, leaving INPUT untouched.
