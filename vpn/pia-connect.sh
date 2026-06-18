@@ -103,11 +103,22 @@ rm -f "$WG_CONF"
 ip link set wg0 up
 
 # ── 7. Routing ────────────────────────────────────────────────────────────────
-# Pin the VPN endpoint itself to the real gateway so handshakes can reach it
+# Pin the VPN endpoint to the real gateway so WireGuard handshakes use eth0
 ip route replace "${WG_HOST}/32" via "$DEFAULT_GW" dev "$DEFAULT_IF"
-# Send everything else through the tunnel
+
+# Route all RFC1918 ranges back via eth0 (the Docker bridge gateway).
+# Without this, nginx responses to LAN clients (e.g. a browser at 192.168.x.x)
+# hit the default route (wg0), get encrypted and sent into the VPN tunnel, and
+# the VPN server can't route them back to your LAN — causing a WebUI timeout.
+# Internet traffic (non-RFC1918) still uses the default wg0 route below.
+ip route replace 10.0.0.0/8     via "$DEFAULT_GW" dev "$DEFAULT_IF"
+ip route replace 192.168.0.0/16 via "$DEFAULT_GW" dev "$DEFAULT_IF"
+# 172.16.0.0/12 is already covered by the directly-connected Docker network route
+
+# All internet traffic goes through the VPN tunnel
 ip route del default 2>/dev/null || true
 ip route add default dev wg0
+
 # Use PIA's DNS
 echo "nameserver ${DNS_IP}" > /etc/resolv.conf
 
