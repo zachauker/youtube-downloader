@@ -23,10 +23,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     ca-certificates \
     netcat-openbsd \
-    nodejs \
     && rm -rf /var/lib/apt/lists/* \
     # Remove Debian's default site so it doesn't shadow our config
     && rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
+
+# Install Deno — yt-dlp's EJS YouTube n-challenge solver ships yt.solver.deno.lib.js
+# and yt.solver.bun.lib.js; Node.js is NOT a supported runtime for it.
+RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 
 # Static ffmpeg/ffprobe binaries
 COPY --from=ffmpeg /ffmpeg  /usr/local/bin/ffmpeg
