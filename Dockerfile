@@ -41,6 +41,12 @@ WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Allow yt-dlp to download the EJS remote challenge-solver components at runtime.
+# These are needed to decode YouTube's n-parameter stream URL obfuscation.
+# The config file is read by yt-dlp even when invoked via the Python API.
+RUN mkdir -p /root/.config/yt-dlp && \
+    printf '%s\n' '--remote-components ejs:github' > /root/.config/yt-dlp/config
+
 # Backend source
 COPY backend/ .
 
