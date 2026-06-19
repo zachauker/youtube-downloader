@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     ca-certificates \
     netcat-openbsd \
+    unzip \
     && rm -rf /var/lib/apt/lists/* \
     # Remove Debian's default site so it doesn't shadow our config
     && rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
