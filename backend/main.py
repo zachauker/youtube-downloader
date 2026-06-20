@@ -145,6 +145,7 @@ def _worker():
                         "player_client": ["web", "default"],
                     }
                 },
+                "remote_components": ["ejs:github"],
                 "cachedir": str(DATA_DIR / "yt-dlp-cache"),
             }
             cookie_file = DOWNLOAD_DIR / "cookies.txt"
